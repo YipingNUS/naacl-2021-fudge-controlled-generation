@@ -108,6 +108,17 @@ def predict_couplet(gpt_model, gpt_tokenizer, iambic_model, rhyme_model, newline
 
 
 def predict_iambic_pentameter_line(gpt_model, gpt_tokenizer, iambic_model, rhyme_model, newline_model, current_text, current_line_text, rhyme_group, dataset_info, rhyme_info, precondition_topk, postcondition_topk, banned_tokens=POETRY_BANNED_TOKENS, condition_lambda=1.0, device='cuda', length_cutoff=30):
+    """
+
+    :param current_text: the prompt (the first line of the poetry)
+    :param current_line_text: the generated text (the second line of the poetry)
+    :param rhyme_group: the rhyme_group of the first line's ending word
+    :param dataset_info:
+    :param rhyme_info:
+    :param banned_tokens:
+    :param condition_lambda:
+    :return:
+    """
     # TODO(poetry) delete banned tokens?
     with torch.no_grad():
         batch_size = 1

@@ -28,7 +28,7 @@ def main(args):
     gpt_tokenizer.add_special_tokens({'pad_token': PAD_TOKEN})
     gpt_pad_id = gpt_tokenizer.encode(PAD_TOKEN)[0]
     gpt_model = AutoModelWithLMHead.from_pretrained(args.model_string).to(args.device)
-    gpt_model.eval()
+    gpt_model.eval()  # Set the model to evaluation model
 
     checkpoint = torch.load(args.iambic_ckpt, map_location=args.device)
     model_args = checkpoint['args']
@@ -67,6 +67,7 @@ def main(args):
 
     with open(args.prefix_file, 'r') as rf:
         lines = rf.readlines()
+    preds = list()
     for line in tqdm(lines, total=len(lines)):
         couplet = predict_couplet(gpt_model, 
                 gpt_tokenizer, 
@@ -81,7 +82,10 @@ def main(args):
                 condition_lambda=args.condition_lambda,
                 device=args.device)
         assert len(couplet) == 2
-        print(couplet[1].strip().replace('\n', ''))
+        preds.append(couplet[1].strip().replace('\n', ''))
+
+    with open(args.pred_file, 'w+') as f:
+        f.write("\n".join(preds))
 
 
 if __name__=='__main__':
@@ -105,6 +109,8 @@ if __name__=='__main__':
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument('--verbose', action='store_true', default=False)
+    parser.add_argument('--pred_file', type=str, default=None, required=False,
+                        help='file to store the predictions')
 
     args = parser.parse_args()
 
