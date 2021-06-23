@@ -56,7 +56,7 @@ def main(args):
         print('num params', num_params(conditioning_model))
 
     inputs = []
-    with open(args.in_file, 'r') as rf:
+    with open(args.in_file, 'r', encoding='utf-8') as rf:
         for line in rf:
             inputs.append(line.strip())
     

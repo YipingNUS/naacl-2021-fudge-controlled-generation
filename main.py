@@ -116,7 +116,7 @@ def main(args):
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
         best_val_metric = 1e8 # lower is better for BCE
         data_start_index = 0
-    print('num params', num_params(model))
+    print(f"Finished initializing the model with {num_params(model)} parameters.")
     criterion = nn.BCEWithLogitsLoss().to(args.device)
     
     if args.evaluate:
@@ -124,10 +124,10 @@ def main(args):
         validate(model, dataset, criterion, epoch, args)
         return
     for epoch in range(args.epochs):
-        print("TRAINING: Epoch {} at {}".format(epoch, time.ctime()))
+        print(f"TRAINING: Epoch {epoch} at {time.ctime()}")
         data_start_index = train(model, dataset, optimizer, criterion, epoch, args, data_start_index)
         if epoch % args.validation_freq == 0:
-            print("VALIDATION: Epoch {} at {}".format(epoch, time.ctime()))
+            print(f"VALIDATION: Epoch {epoch} at {time.ctime()}")
             metric = validate(model, dataset, criterion, epoch, args)
 
             if not args.debug:
@@ -174,7 +174,7 @@ if __name__=='__main__':
     parser.add_argument('--lr', type=float, default=1e-3, help='Adam learning rate')
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     parser.add_argument('--device', type=str, default='cuda', choices=['cpu', 'cuda'])
-    parser.add_argument('--num_workers', type=int, default=20, help='num workers for data loader')
+    parser.add_argument('--num_workers', type=int, default=8, help='num workers for data loader')
     parser.add_argument('--evaluate', action='store_true', default=False)
     parser.add_argument('--debug', action='store_true', default=False)
 

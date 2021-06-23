@@ -95,7 +95,7 @@ if __name__=='__main__':
             all_success += 1
     print(f"iambic: {iambic} out of {total}; frac: {iambic/total}")
     print(f"rhymes: {rhymes} out of {total}; frac: {rhymes/total}")
-    print(f"end sentence: {end} out of {total}; frac:', {end/total}")
+    print(f"end sentence: {end} out of {total}; frac: {end/total}")
     print(f"10 syllables: {ten_syllables} out of {total}; frac: {ten_syllables/total}")
     print(f"all success: {all_success} out of {total}; frac: {all_success/total}")
     print(f"rhymes with diff word: {diff_rhymes} out of {total}; frac: {diff_rhymes/total}")
