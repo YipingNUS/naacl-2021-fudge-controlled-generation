@@ -82,7 +82,7 @@ def main(args):
                 condition_lambda=args.condition_lambda,
                 device=args.device)
         assert len(couplet) == 2
-        preds.append(couplet[1].strip().replace('\n', ''))
+        preds.append(couplet[1].strip().replace('\n', '').encode('ascii', errors='ignore').decode('ascii'))
 
     with open(args.pred_file, 'w+') as f:
         f.write("\n".join(preds))

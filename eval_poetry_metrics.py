@@ -64,7 +64,10 @@ if __name__=='__main__':
     preds = []
     with open(args.pred_file, 'r') as rf:
         for line in rf:
-            preds.append(line[:-1]) # drop \n but not beginning spaces if any
+            if line[0] == ' ':
+                preds.append(' ' + line.strip())
+            else:
+                preds.append(line.strip())
     prefixes = []
     with open(args.prefix_file, 'r') as rf:
         for line in rf:
@@ -90,27 +93,19 @@ if __name__=='__main__':
             end += 1
         if is_iambic(pred) and perfect_rhyme_end(prefix, pred) and count_syllables(pred) == 10 and pred.strip()[-1] in PHRASE_ENDS:
             all_success += 1
-    print('iambic', iambic, 'out of', total, ', frac', iambic / total)
-    print('rhymes', rhymes, 'out of', total, ', frac', rhymes / total)
-    print('end sentence', end, 'out of', total, ', frac', end / total)
-    print('10 syllables', ten_syllables, 'out of', total, ', frac', ten_syllables / total)
-    print('all success', all_success, 'out of', total, ', frac', all_success / total)
-    print('rhymes with diff word', diff_rhymes, 'out of', total, ', frac', diff_rhymes / total)
+    print(f"iambic: {iambic} out of {total}; frac: {iambic/total}")
+    print(f"rhymes: {rhymes} out of {total}; frac: {rhymes/total}")
+    print(f"end sentence: {end} out of {total}; frac:', {end/total}")
+    print(f"10 syllables: {ten_syllables} out of {total}; frac: {ten_syllables/total}")
+    print(f"all success: {all_success} out of {total}; frac: {all_success/total}")
+    print(f"rhymes with diff word: {diff_rhymes} out of {total}; frac: {diff_rhymes/total}")
 
-    print('distinctness', distinctness(preds))
+    print(f"distinctness (unique 1-/2-/3-grams):  {distinctness(preds)}")
 
     grammar_tokenizer = AutoTokenizer.from_pretrained('textattack/roberta-base-CoLA')
     grammar_model = AutoModelForSequenceClassification.from_pretrained('textattack/roberta-base-CoLA').to(args.device)
     grammar_model.eval()
-    print('grammaticality', grammaticality(preds, grammar_tokenizer, grammar_model, device=args.device))
-
-    perplexities = []
-    eval_tokenizer = AutoTokenizer.from_pretrained('transfo-xl-wt103')
-    eval_model = AutoModelWithLMHead.from_pretrained('transfo-xl-wt103').to(args.device)
-    eval_model.eval()
-    for prefix, pred in zip(prefixes, preds):
-        perplexities.append(conditional_perplexity(prefix, pred, eval_tokenizer, eval_model, device=args.device, sep_losses=True))
-    print('transformer xl perplexity', np.mean(perplexities), '+/-', np.std(perplexities))
+    print(f"grammaticality: {grammaticality(preds, grammar_tokenizer, grammar_model, device=args.device).item()}")
 
     perplexities = []
     eval_tokenizer = AutoTokenizer.from_pretrained('openai-gpt')
@@ -118,7 +113,7 @@ if __name__=='__main__':
     eval_model.eval()
     for prefix, pred in zip(prefixes, preds):
         perplexities.append(conditional_perplexity(prefix, pred, eval_tokenizer, eval_model, device=args.device))
-    print('gpt perplexity', np.mean(perplexities), '+/-', np.std(perplexities))
+    print(f"gpt perplexity: {np.mean(perplexities)} +/- {np.std(perplexities)}")
 
     # NOTE: uncomment this section with the path to the Shakespeare-finetuned GPT to evaluate this metric. it's in ckpt/poetry/gpt_finetune_shakespeare.pth.tar. 
     # eval_tokenizer = AutoTokenizer.from_pretrained('openai-gpt')
