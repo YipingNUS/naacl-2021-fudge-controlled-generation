@@ -1,4 +1,5 @@
 import torch
+import pdb
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelWithLMHead, pipeline, set_seed, GPT2Tokenizer, GPT2Model, \
@@ -41,7 +42,7 @@ def predict_factuality(model, tokenizer, conditioning_model, input_text, precond
                                           input_ids, cur_len, max_length, min_length, do_sample,
                                           temperature, top_k, top_p, repetition_penalty, no_repeat_ngram_size,
                                           bad_words_ids, pad_token_id, eos_token_id, batch_size, attention_mask,
-                                          use_cache, model_specific_kwargs).tolist()
+                                          encoded_input, use_cache, model_specific_kwargs).tolist()
 
         return [tokenizer.decode(s[1:]) for s in output]  # 1: to delete the pad token
 
@@ -69,6 +70,7 @@ def _generate_no_beam_search(
         eos_token_id,
         batch_size,
         attention_mask,
+        encoder_input_ids,
         use_cache,
         model_kwargs,
 ):
@@ -78,13 +80,13 @@ def _generate_no_beam_search(
     # length of generated sentences / unfinished sentences
     unfinished_sents = input_ids.new(batch_size).fill_(1)
     sent_lengths = input_ids.new(batch_size).fill_(max_length)
+    eos_tensor = torch.zeros_like(encoder_input_ids[:,0:1]).unsqueeze(1).fill_(eos_token_id).expand(-1, precondition_topk, -1).int()
 
     past = None
     while cur_len < max_length:
         model_inputs = model.prepare_inputs_for_generation(
             input_ids, past=past, attention_mask=attention_mask, use_cache=use_cache, **model_kwargs
         )
-        #pdb.set_trace()
 
         outputs = model(**model_inputs, return_dict=True)
         next_token_logits = outputs.logits[:, -1, :]
@@ -110,14 +112,21 @@ def _generate_no_beam_search(
             past = outputs.mems
 
         top_logits, top_indices = scores.topk(precondition_topk, dim=1)  # batch x topk
-        tplus1_candidates = torch.cat(
-            [input_ids.unsqueeze(1).expand(-1, precondition_topk, -1), top_indices.unsqueeze(2)], dim=2)[:, :,
-                            1:]  # batch x topk x seq+1, with pad dropped
-        expanded_lengths = torch.LongTensor(
-            [[cur_len for _ in range(precondition_topk)] for _ in range(batch_size)]).to(scores.device)
+
         if condition_lambda == 0:
             condition_logits = torch.zeros_like(top_logits).float()
         else:
+            # Prepare the input to the entailment model [CLS] document [SEP] summary [SEP]
+            tplus1_candidates = torch.cat(
+                [encoder_input_ids.unsqueeze(1).expand(-1, precondition_topk, -1),
+                 input_ids.unsqueeze(1).expand(-1, precondition_topk, -1)[:, :,1:],
+                 top_indices.unsqueeze(2),
+                 eos_tensor], dim=2) # batch x topk x seq+1, with pad dropped
+            pdb.set_trace()
+
+            expanded_lengths = torch.LongTensor(
+                [[cur_len for _ in range(precondition_topk)] for _ in range(batch_size)]).to(scores.device)
+
             condition_logits = conditioning_model(tplus1_candidates.flatten(0, 1),  # batch*topk x seq+1
                                                   expanded_lengths.flatten(0, 1),  # batch*topk
                                                   None,
