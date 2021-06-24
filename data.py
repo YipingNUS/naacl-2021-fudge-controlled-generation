@@ -28,6 +28,7 @@ def collate(batch):
     max_length = lengths.max()
     for i in range(len(inputs)):
         if len(inputs[i]) < max_length:
+            # Yiping TODO: should append pad_id instead of zeros to make it more generalizable
             inputs[i] = torch.cat([inputs[i], torch.zeros(max_length - len(inputs[i])).long()], dim=0) # actually 0 is fine as pad since it's masked out
     inputs = torch.stack(inputs, dim=0)
     future_words = torch.LongTensor([b[2] for b in batch]).unsqueeze(0).expand(len(batch), -1).clone() # batch x N=batch
@@ -190,10 +191,9 @@ class Dataset:
         print('split sizes:')
         for key in ['train', 'val', 'test']:
             print(key, len(self.splits[key]))
-        if not self.formality:
-            print('total words', self.total_words)
-            print('vocab size', len(self.index2word))
 
+        print('total words', self.total_words)
+        print('vocab size', len(self.index2word))
 
     def shuffle(self, split, seed=None):
         assert split in ['train', 'val', 'test']
@@ -201,8 +201,7 @@ class Dataset:
             random.seed(seed)
         random.shuffle(self.splits[split])
 
-
-    def loader(self, split, num_workers=20, indices=None):
+    def loader(self, split, num_workers=8, indices=None):
         assert split in ['train', 'val', 'test']
         data = self.splits[split] if indices is None else [self.splits[split][i] for i in indices]
         return torch.utils.data.DataLoader(SplitLoader(data, self), batch_size=self.batch_size, pin_memory=True, collate_fn=collate, num_workers=num_workers)
@@ -215,14 +214,11 @@ class SplitLoader(torch.utils.data.IterableDataset):
         self.pos = 0
         self.parent = parent
 
-
     def __len__(self):
         return len(self.data)
 
-
     def __iter__(self):
         return self
-    
 
     def __next__(self):
         increment = 1
@@ -262,24 +258,16 @@ class SplitLoader(torch.utils.data.IterableDataset):
                             example = (inp, length, future_word, word_log_prob, pad_id, classification_label, syllables_to_go, future_word_num_syllables, rhyme_group_index)
                             valid = not failed
             elif self.parent.formality:
-                future_word_num_syllables, rhyme_group_index, syllables_to_go = -1, -1, -1
+                # these variables aren't relevant to the task. Set tup dummy value
+                future_word_num_syllables, rhyme_group_index, syllables_to_go, word_log_prob, future_word = -1, -1, -1, 0, 0
                 raw_sentence, classification_label = self.data[self.pos]
-                original_sentence = raw_sentence.split()
                 sentence = self.parent.tokenizer.encode(raw_sentence, return_tensors='pt')[0]
                 length = len(sentence)
                 min_sentence_length = MIN_SENTENCE_LENGTH
-                if len(sentence) > min_sentence_length: # set to 3. well, everything in data is > 3 for the bag of words task
+                if len(sentence) > min_sentence_length:
                     pos_to_split = length # no need to split since we already have the label
                     inp = sentence[:pos_to_split]
                     length = len(inp)
-                    num_words_in_input = len(self.parent.tokenizer.decode(inp).split())
-                    # only look up to 10 words ahead if we're doing count syllables, since we'll filter out anything more than 10 syllables ahead anyway
-                    future_word_position_max = len(original_sentence) - 1
-                    future_word_position = 0
-                    future_word = 'placeholder'
-                    unstripped_future_word = future_word
-                    future_word = future_word.strip().strip(string.punctuation) # NOTE: we didn't strip punctuation for the topic bag of words paper experiments for our method. it doesn't make much difference, though.
-                    word_log_prob, future_word = 0, 0
                     pad_id = self.parent.gpt_pad_id
                     example = (inp, length, future_word, word_log_prob, pad_id, classification_label, syllables_to_go, future_word_num_syllables, rhyme_group_index)
                     valid = True
