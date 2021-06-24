@@ -73,11 +73,10 @@ if __name__=='__main__':
     parser = ArgumentParser()
 
     # DATA
-    parser.add_argument('--ckpt', type=str, required=True)
-    parser.add_argument('--dataset_info', type=str, required=True, help='saved dataset info')
+    parser.add_argument('--ckpt', type=str, required=False)
     parser.add_argument('--model_string', type=str, default='patrickvonplaten/bert2bert_cnn_daily_mail')
     parser.add_argument('--model_path', type=str, default=None)
-    parser.add_argument('--attribute_model_string', type=str, default='')
+    parser.add_argument('--attribute_model_string', type=str, default='textattack/bert-base-uncased-MNLI')
 
     parser.add_argument('--in_file', type=str, default=None, required=True, help='file containing text to run pred on')
 
