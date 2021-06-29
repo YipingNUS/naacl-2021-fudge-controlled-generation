@@ -8,7 +8,7 @@ def predict_factuality(model, tokenizer, conditioning_model, input_text, precond
         batch_size = len(input_text)
 
         # assumes initially all same length.
-        encoder_input_ids = [tokenizer.encode(it, return_tensors='pt').to(device) for it in input_text]  # batch x seq
+        encoder_input_ids = [tokenizer.encode(it, max_length=422, truncation=True, return_tensors='pt').to(device) for it in input_text]  # batch x seq
         encoder_input_ids = torch.cat(encoder_input_ids, dim=0)
 
         input_ids= torch.LongTensor([[tokenizer.bos_token_id]]).to(device)
